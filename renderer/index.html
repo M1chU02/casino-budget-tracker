@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casino Budget Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="appbar">
+    <h1>Casino Budget Tracker</h1>
+    <div class="appbar-right">
+      <button id="panicBtn" class="danger">I need help</button>
+      <button id="exportBtn">Export CSV</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2>Budgets</h2>
+      <form id="budgetForm" class="row">
+        <label>Weekly budget (€)
+          <input type="number" id="weeklyBudget" min="0" step="1" />
+        </label>
+        <label>Monthly budget (€)
+          <input type="number" id="monthlyBudget" min="0" step="1" />
+        </label>
+        <button type="submit">Save budgets</button>
+        <label class="switch">
+          <input type="checkbox" id="commitmentMode" />
+          <span>Commitment mode (cooldown)</span>
+        </label>
+        <label>Cooldown (min)
+          <input type="number" id="cooldownMinutes" min="1" step="1" />
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="hideBalances" />
+          <span>Hide balances</span>
+        </label>
+      </form>
+
+      <div id="summary" class="summary"></div>
+    </section>
+
+    <section class="card">
+      <h2>Casinos</h2>
+      <form id="casinoForm" class="row">
+        <input id="casinoName" placeholder="Add casino (e.g., Stake, Shuffle)" />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="casinoList" class="list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Log entry</h2>
+      <form id="entryForm" class="grid">
+        <label>Date
+          <input type="date" id="entryDate" required />
+        </label>
+        <label>Casino
+          <select id="entryCasino" required></select>
+        </label>
+        <label>Spent (€)
+          <input type="number" id="entrySpent" min="0" step="0.01" required />
+        </label>
+        <label>Won (€)
+          <input type="number" id="entryWon" min="0" step="0.01" />
+        </label>
+        <label>Notes
+          <input type="text" id="entryNotes" maxlength="120" placeholder="Daily summary/wins/losses" />
+        </label>
+        <button id="addEntryBtn" type="submit">Add entry</button>
+      </form>
+      <p class="hint">Tip: Logging daily, even on non‑play days, helps awareness.</p>
+    </section>
+
+    <section class="card">
+      <h2>History</h2>
+      <table id="historyTable" class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Casino</th>
+            <th>Spent</th>
+            <th>Won</th>
+            <th>Net</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="card danger-zone">
+      <h2>Danger zone</h2>
+      <button id="wipeDataBtn" class="danger">Erase all data</button>
+      <p class="hint">If gambling feels hard to control, consider a break. <a href="https://www.begambleaware.org/" target="_blank" rel="noopener">Help resources</a>.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div id="sessionTimer">Session: 00:00</div>
+    <div>Stay safe: budgets first, never chase losses.</div>
+  </footer>
+
+  <dialog id="cooldownDialog">
+    <form method="dialog">
+      <h3>Over budget – take a breather</h3>
+      <p>You are at or over your budget. Commitment mode requires a short cooldown before adding more spending. Write a reason to proceed:</p>
+      <textarea id="cooldownReason" rows="4" placeholder="Why do you need to continue today?"></textarea>
+      <div class="row">
+        <button value="cancel">Cancel</button>
+        <button id="startCooldownBtn" value="start">Start cooldown</button>
+      </div>
+      <p id="cooldownStatus" class="muted"></p>
+    </form>
+  </dialog>
+
+  <script src="renderer.js" type="module"></script>
+</body>
+</html>
