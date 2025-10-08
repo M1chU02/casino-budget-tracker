@@ -75,7 +75,7 @@ const template = [
         click: () => shell.openExternal("https://www.begambleaware.org/"),
       },
       {
-        label: "Self-exclusion options (EU)",
+        label: "Self-exclusion options (EU/UK)",
         click: () => shell.openExternal("https://www.gamstop.co.uk/"),
       },
     ],
@@ -160,16 +160,15 @@ ipcMain.handle("summary:compute", (_e) => {
   };
 });
 
-import fs from "node:fs/promises";
 ipcMain.handle("dialog:saveCSV", async (_e, defaultName, contents) => {
-  // In this sandbox we can't show native dialogs; write to a temp path instead
-  const tmp = process.platform === "win32" ? "C:\\tmp" : "/tmp";
-  try {
-    await fs.mkdir(tmp, { recursive: true });
-    const filePath = `${tmp}/${defaultName}`;
-    await fs.writeFile(filePath, contents, "utf8");
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    defaultPath: defaultName,
+    filters: [{ name: "CSV", extensions: ["csv"] }],
+  });
+  if (!canceled && filePath) {
+    const fs = await import("node:fs");
+    await fs.promises.writeFile(filePath, contents, "utf8");
     return filePath;
-  } catch {
-    return null;
   }
+  return null;
 });

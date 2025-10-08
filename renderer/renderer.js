@@ -12,8 +12,11 @@ const state = {
     hideBalances: false,
     currency: "EUR",
     currencySymbol: "€",
+    theme: "stake",
+    lastSection: "dashboard",
   },
 };
+
 let cooldownUntil = null;
 let sessionStart = Date.now();
 
@@ -27,7 +30,36 @@ function net(e) {
 }
 
 async function load() {
-  // Apply theme class early
+  // Build sidebar nav items if missing or incomplete
+  (function ensureSidebarNav() {
+    const nav =
+      document.getElementById("sideNav") ||
+      document.querySelector(".sidebar nav");
+    if (!nav) return;
+    const needed = [
+      ["dashboard", "🏠 Dashboard"],
+      ["casinos", "🎰 Casinos"],
+      ["entry", "✍️ Log entry"],
+      ["history", "📜 History"],
+      ["insights", "📊 Insights"],
+      ["danger", "🛑 Danger"],
+    ];
+    const existing = Array.from(nav.querySelectorAll(".nav-item")).map(
+      (b) => b.dataset.section
+    );
+    if (existing.length < needed.length) {
+      nav.innerHTML = needed
+        .map(([key, label]) => {
+          const danger = key === "danger" ? " danger" : "";
+          return `<button class="nav-item${danger}" data-section="${key}">${label}</button>`;
+        })
+        .join("\n");
+    }
+  })();
+
+  const s = await window.api.getState();
+  Object.assign(state, s);
+  // Theme class
   document.body.classList.toggle(
     "theme-stake",
     (state.settings.theme || "stake") === "stake"
@@ -36,21 +68,19 @@ async function load() {
     "theme-shuffle",
     (state.settings.theme || "stake") === "shuffle"
   );
-  const s = await window.api.getState();
-  Object.assign(state, s);
+
   renderCasinos();
   fillCasinoSelect();
   restoreBudgets();
   renderHistory();
   renderSummary();
   drawCharts();
+
+  // Initial section
+  setSection(state.settings.lastSection || "dashboard");
 }
 
 function restoreBudgets() {
-  // Theme dropdown
-  const themeSel = document.getElementById("themeToggle");
-  if (themeSel) themeSel.value = state.settings.theme || "stake";
-
   $("#weeklyBudget").value = state.budgets.weekly || 0;
   $("#monthlyBudget").value = state.budgets.monthly || 0;
   $("#commitmentMode").checked = !!state.settings.commitmentMode;
@@ -61,6 +91,8 @@ function restoreBudgets() {
     o.value.startsWith(state.settings.currency + "|")
   );
   if (match) $("#currencySelect").value = match.value;
+  const themeSel = $("#themeToggle");
+  if (themeSel) themeSel.value = state.settings.theme || "stake";
 }
 
 function renderSummary() {
@@ -69,6 +101,7 @@ function renderSummary() {
       state.budgets.weekly > 0 && s.week.spent > state.budgets.weekly;
     const monthOver =
       state.budgets.monthly > 0 && s.month.spent > state.budgets.monthly;
+
     const remainingW = Math.max(0, (state.budgets.weekly || 0) - s.week.spent);
     const remainingM = Math.max(
       0,
@@ -125,7 +158,7 @@ function renderCasinos() {
       Monthly <input type="number" min="0" step="1" value="${
         c.monthlyLimit || 0
       }" data-ml="${c.id}"></div>
-      <button data-save="${c.id}">Save limits</button>
+      <button data-save="${c.id}" class="ghost">Save limits</button>
       <button data-id="${c.id}" class="danger">Remove</button>`;
     ul.appendChild(li);
   });
@@ -255,8 +288,7 @@ function cooldownDialog() {
   });
 }
 
-// Simple canvas charts
-
+/* ===== Charts (responsive & Hi-DPI) ===== */
 function setupCanvasDPR(canvas, height = 220) {
   const parentW = Math.max(
     320,
@@ -270,16 +302,6 @@ function setupCanvasDPR(canvas, height = 220) {
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   return ctx;
-}
-
-function drawPlaceholder(ctx, text) {
-  const w = ctx.canvas.width,
-    h = ctx.canvas.height;
-  ctx.save();
-  ctx.fillStyle = "#2a3442";
-  ctx.font = "13px Inter, system-ui";
-  ctx.fillText(text, 24, h / dpr / 2 || 80);
-  ctx.restore();
 }
 
 function drawLineChart(ctx, labels, values) {
@@ -348,11 +370,8 @@ function drawCharts() {
   const days = Object.keys(byDay).sort().slice(-8);
   const vals = days.map((d) => byDay[d]);
   const line = setupCanvasDPR($("#weeklyNetChart"));
-  if (days.length) {
-    drawLineChart(line, days, vals);
-  }
+  if (days.length) drawLineChart(line, days, vals);
 
-  // Weekly spend per casino
   const now = new Date();
   const monday = new Date(now);
   const day = (now.getDay() + 6) % 7;
@@ -368,26 +387,51 @@ function drawCharts() {
   const labels = Array.from(spendByCasino.keys());
   const spendVals = Array.from(spendByCasino.values());
   const bars = setupCanvasDPR($("#casinoSpendChart"));
-  if (labels.length) {
-    drawBarChart(bars, labels, spendVals);
+  if (labels.length) drawBarChart(bars, labels, spendVals);
+}
+
+let chartsResizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(chartsResizeTimer);
+  chartsResizeTimer = setTimeout(drawCharts, 150);
+});
+
+/* ===== Navigation ===== */
+function setSection(name) {
+  window.api.setSettings({ lastSection: name });
+  document.querySelectorAll(".sidebar .nav-item").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.section === name);
+  });
+  const cards = Array.from(document.querySelectorAll("[data-section]"));
+  cards.forEach((card) => {
+    const tags = card.getAttribute("data-section").split(" ");
+    const show =
+      tags.includes(name) ||
+      (name === "dashboard" && tags.includes("dashboard"));
+    card.classList.toggle("show", show);
+  });
+  if (name === "insights" || name === "dashboard") {
+    setTimeout(drawCharts, 80);
   }
 }
 
-// Events
-document.getElementById("budgetForm").addEventListener("submit", async (e) => {
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".nav-item");
+  if (!btn) return;
+  setSection(btn.dataset.section);
+});
+
+/* ===== Events ===== */
+$("#budgetForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const weekly = Number(document.getElementById("weeklyBudget").value || 0);
-  const monthly = Number(document.getElementById("monthlyBudget").value || 0);
+  const weekly = Number($("#weeklyBudget").value || 0);
+  const monthly = Number($("#monthlyBudget").value || 0);
   await window.api.setBudgets({ weekly, monthly });
-  const [code, symbol] = document
-    .getElementById("currencySelect")
-    .value.split("|");
+  const [code, symbol] = $("#currencySelect").value.split("|");
   await window.api.setSettings({
-    commitmentMode: document.getElementById("commitmentMode").checked,
-    cooldownMinutes: Number(
-      document.getElementById("cooldownMinutes").value || 3
-    ),
-    hideBalances: document.getElementById("hideBalances").checked,
+    commitmentMode: $("#commitmentMode").checked,
+    cooldownMinutes: Number($("#cooldownMinutes").value || 3),
+    hideBalances: $("#hideBalances").checked,
     currency: code,
     currencySymbol: symbol,
   });
@@ -397,45 +441,43 @@ document.getElementById("budgetForm").addEventListener("submit", async (e) => {
   drawCharts();
 });
 
-document.getElementById("casinoForm").addEventListener("submit", async (e) => {
+$("#casinoForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const name = document.getElementById("casinoName").value.trim();
-  const wl = Number(document.getElementById("casinoWeeklyLimit").value || 0);
-  const ml = Number(document.getElementById("casinoMonthlyLimit").value || 0);
+  const name = $("#casinoName").value.trim();
+  const wl = Number($("#casinoWeeklyLimit").value || 0);
+  const ml = Number($("#casinoMonthlyLimit").value || 0);
   if (!name) return;
   await window.api.addCasino(name, wl, ml);
   Object.assign(state, await window.api.getState());
-  document.getElementById("casinoName").value = "";
-  document.getElementById("casinoWeeklyLimit").value = "";
-  document.getElementById("casinoMonthlyLimit").value = "";
+  $("#casinoName").value = "";
+  $("#casinoWeeklyLimit").value = "";
+  $("#casinoMonthlyLimit").value = "";
   renderCasinos();
   fillCasinoSelect();
   drawCharts();
 });
 
-document.getElementById("entryForm").addEventListener("submit", async (e) => {
+$("#entryForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const casinoId = document.getElementById("entryCasino").value;
+  const casinoId = $("#entryCasino").value;
   const ok = await maybeCooldownGateForCasino(casinoId);
   if (!ok) return;
-  const dateISO = new Date(
-    document.getElementById("entryDate").value
-  ).toISOString();
-  const spent = Number(document.getElementById("entrySpent").value || 0);
-  const won = Number(document.getElementById("entryWon").value || 0);
-  const notes = document.getElementById("entryNotes").value;
+  const dateISO = new Date($("#entryDate").value).toISOString();
+  const spent = Number($("#entrySpent").value || 0);
+  const won = Number($("#entryWon").value || 0);
+  const notes = $("#entryNotes").value;
   if (!dateISO || !casinoId) return;
   await window.api.addEntry({ dateISO, casinoId, spent, won, notes });
   Object.assign(state, await window.api.getState());
   renderHistory();
   renderSummary();
   drawCharts();
-  document.getElementById("entrySpent").value = "";
-  document.getElementById("entryWon").value = "";
-  document.getElementById("entryNotes").value = "";
+  $("#entrySpent").value = "";
+  $("#entryWon").value = "";
+  $("#entryNotes").value = "";
 });
 
-document.getElementById("historyTable").addEventListener("click", async (e) => {
+$("#historyTable").addEventListener("click", async (e) => {
   const id = e.target?.dataset?.del;
   if (!id) return;
   await window.api.deleteEntry(id);
@@ -445,7 +487,7 @@ document.getElementById("historyTable").addEventListener("click", async (e) => {
   drawCharts();
 });
 
-document.getElementById("wipeDataBtn").addEventListener("click", async () => {
+$("#wipeDataBtn").addEventListener("click", async () => {
   const wiped = await window.api.clearAll();
   if (wiped) {
     Object.assign(state, await window.api.getState());
@@ -458,12 +500,10 @@ document.getElementById("wipeDataBtn").addEventListener("click", async () => {
   }
 });
 
-document
-  .getElementById("exportBtn")
-  .addEventListener("click", () => exportCSV());
+$("#exportBtn").addEventListener("click", () => exportCSV());
 window.api.onExportCSV(() => exportCSV());
 
-document.getElementById("panicBtn").addEventListener("click", () => {
+$("#panicBtn").addEventListener("click", () => {
   const resources = [
     ["BeGambleAware (UK)", "https://www.begambleaware.org/"],
     ["GamCare (UK)", "https://www.gamcare.org.uk/"],
@@ -499,19 +539,6 @@ async function exportCSV() {
   if (path) alert("Exported to " + path);
 }
 
-document.getElementById("entryDate").valueAsDate = new Date();
-
-setInterval(() => {
-  const ms = Date.now() - sessionStart;
-  const m = Math.floor(ms / 60000),
-    s = Math.floor((ms % 60000) / 1000);
-  document.getElementById("sessionTimer").textContent = `Session: ${String(
-    m
-  ).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}, 1000);
-
-load();
-
 // Theme switch
 const themeSel = document.getElementById("themeToggle");
 if (themeSel) {
@@ -524,8 +551,18 @@ if (themeSel) {
   });
 }
 
-let chartsResizeTimer = null;
-window.addEventListener("resize", () => {
-  clearTimeout(chartsResizeTimer);
-  chartsResizeTimer = setTimeout(drawCharts, 150);
-});
+// Default date to today
+$("#entryDate").valueAsDate = new Date();
+
+// Session timer
+setInterval(() => {
+  const ms = Date.now() - sessionStart;
+  const m = Math.floor(ms / 60000),
+    s = Math.floor((ms % 60000) / 1000);
+  $("#sessionTimer").textContent = `Session: ${String(m).padStart(
+    2,
+    "0"
+  )}:${String(s).padStart(2, "0")}`;
+}, 1000);
+
+load();

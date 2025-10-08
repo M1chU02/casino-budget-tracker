@@ -27,6 +27,7 @@ const schema = {
       currency: { type: "string", default: "EUR" },
       currencySymbol: { type: "string", default: "€" },
       theme: { type: "string", default: "stake" },
+      lastSection: { type: "string", default: "dashboard" },
     },
     default: {
       commitmentMode: false,
@@ -35,6 +36,7 @@ const schema = {
       currency: "EUR",
       currencySymbol: "€",
       theme: "stake",
+      lastSection: "dashboard",
     },
   },
 };
@@ -152,5 +154,7 @@ export function clearAllData() {
     hideBalances: false,
     currency: "EUR",
     currencySymbol: "€",
+    theme: "stake",
+    lastSection: "dashboard",
   });
 }

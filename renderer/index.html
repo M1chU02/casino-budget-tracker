@@ -6,162 +6,179 @@
     <title>Casino Budget Tracker</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <header class="appbar">
-      <h1>Casino Budget Tracker</h1>
-      <div class="appbar-right">
-        <select id="themeToggle">
-          <option value="stake">Stake</option>
-          <option value="shuffle">Shuffle</option>
-        </select>
-        <button id="panicBtn" class="danger">I need help</button>
-        <button id="exportBtn">Export CSV</button>
-      </div>
-    </header>
-
-    <main class="layout">
-      <section class="card">
-        <h2>Budgets</h2>
-        <form id="budgetForm" class="row">
-          <label
-            >Weekly budget
-            <input type="number" id="weeklyBudget" min="0" step="1" />
-          </label>
-          <label
-            >Monthly budget
-            <input type="number" id="monthlyBudget" min="0" step="1" />
-          </label>
-          <label
-            >Currency
-            <select id="currencySelect">
-              <option value="EUR|€">EUR (€)</option>
-              <option value="USD|$">USD ($)</option>
-              <option value="PLN|zł">PLN (zł)</option>
-              <option value="ARS|$">ARS ($)</option>
-              <option value="GBP|£">GBP (£)</option>
-              <option value="BRL|R$">BRL (R$)</option>
-            </select>
-          </label>
-          <button type="submit">Save budgets</button>
-          <label class="switch">
-            <input type="checkbox" id="commitmentMode" />
-            <span>Commitment mode (cooldown)</span>
-          </label>
-          <label
-            >Cooldown (min)
-            <input type="number" id="cooldownMinutes" min="1" step="1" />
-          </label>
-          <label class="switch">
-            <input type="checkbox" id="hideBalances" />
-            <span>Hide balances</span>
-          </label>
-        </form>
-
-        <div id="summary" class="summary"></div>
-      </section>
-
-      <section class="card">
-        <h2>Casinos</h2>
-        <form id="casinoForm" class="row">
-          <input
-            id="casinoName"
-            placeholder="Add casino (e.g., Stake, Shuffle)" />
-          <input
-            id="casinoWeeklyLimit"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Weekly limit" />
-          <input
-            id="casinoMonthlyLimit"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Monthly limit" />
-          <button type="submit">Add</button>
-        </form>
-        <ul id="casinoList" class="list"></ul>
-      </section>
-
-      <section class="card">
-        <h2>Log entry</h2>
-        <form id="entryForm" class="grid">
-          <label
-            >Date
-            <input type="date" id="entryDate" required />
-          </label>
-          <label
-            >Casino
-            <select id="entryCasino" required></select>
-          </label>
-          <label
-            >Spent
-            <input type="number" id="entrySpent" min="0" step="0.01" required />
-          </label>
-          <label
-            >Won
-            <input type="number" id="entryWon" min="0" step="0.01" />
-          </label>
-          <label
-            >Notes
-            <input
-              type="text"
-              id="entryNotes"
-              maxlength="120"
-              placeholder="Daily summary/wins/losses" />
-          </label>
-          <button id="addEntryBtn" type="submit">Add entry</button>
-        </form>
-        <p class="hint">
-          Tip: Logging daily, even on non‑play days, helps awareness.
-        </p>
-      </section>
-
-      <section class="card">
-        <h2>History</h2>
-        <table id="historyTable" class="table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Casino</th>
-              <th>Spent</th>
-              <th>Won</th>
-              <th>Net</th>
-              <th>Notes</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </section>
-
-      <section class="card">
-        <h2>Insights</h2>
-        <div class="charts">
-          <canvas id="weeklyNetChart" width="800" height="220"></canvas>
-          <canvas id="casinoSpendChart" width="800" height="220"></canvas>
+  <body class="theme-stake">
+    <div class="app-shell">
+      <header class="appbar">
+        <h1>Casino Budget Tracker</h1>
+        <div class="appbar-right">
+          <select id="themeToggle">
+            <option value="stake">Stake</option>
+            <option value="shuffle">Shuffle</option>
+          </select>
+          <button id="panicBtn" class="danger">I need help</button>
+          <button id="exportBtn">Export CSV</button>
         </div>
-      </section>
+      </header>
 
-      <section class="card danger-zone">
-        <h2>Danger zone</h2>
-        <button id="wipeDataBtn" class="danger">Erase all data</button>
-        <p class="hint">
-          If gambling feels hard to control, consider a break.
-          <a
-            href="https://www.begambleaware.org/"
-            target="_blank"
-            rel="noopener"
-            >Help resources</a
-          >.
-        </p>
-      </section>
-    </main>
+      <aside class="sidebar">
+        <div class="brand">🎯 CBT</div>
+        <nav id="sideNav">
+          <button class="nav-item" data-section="dashboard">
+            🏠 Dashboard
+          </button>
+          <button class="nav-item" data-section="casinos">🎰 Casinos</button>
+          <button class="nav-item" data-section="entry">✍️ Log entry</button>
+          <button class="nav-item" data-section="history">📜 History</button>
+          <button class="nav-item" data-section="insights">📊 Insights</button>
+          <button class="nav-item danger" data-section="danger">
+            🛑 Danger
+          </button>
+        </nav>
+      </aside>
 
-    <footer class="footer">
-      <div id="sessionTimer">Session: 00:00</div>
-      <div>Stay safe: budgets first, never chase losses.</div>
-    </footer>
+      <main class="layout content">
+        <section class="card" data-section="dashboard budgets">
+          <h2>Budgets</h2>
+          <form id="budgetForm" class="row">
+            <label
+              >Weekly budget
+              <input type="number" id="weeklyBudget" min="0" step="1"
+            /></label>
+            <label
+              >Monthly budget
+              <input type="number" id="monthlyBudget" min="0" step="1"
+            /></label>
+            <label
+              >Currency
+              <select id="currencySelect">
+                <option value="EUR|€">EUR (€)</option>
+                <option value="USD|$">USD ($)</option>
+                <option value="PLN|zł">PLN (zł)</option>
+                <option value="ARS|$">ARS ($)</option>
+                <option value="GBP|£">GBP (£)</option>
+                <option value="BRL|R$">BRL (R$)</option>
+              </select>
+            </label>
+            <button type="submit" class="primary">Save budgets</button>
+            <label class="switch"
+              ><input type="checkbox" id="commitmentMode" /><span
+                >Commitment mode (cooldown)</span
+              ></label
+            >
+            <label
+              >Cooldown (min)
+              <input type="number" id="cooldownMinutes" min="1" step="1"
+            /></label>
+            <label class="switch"
+              ><input type="checkbox" id="hideBalances" /><span
+                >Hide balances</span
+              ></label
+            >
+          </form>
+          <div id="summary" class="summary"></div>
+        </section>
+
+        <section class="card" data-section="casinos">
+          <h2>Casinos</h2>
+          <form id="casinoForm" class="row">
+            <input
+              id="casinoName"
+              placeholder="Add casino (e.g., Stake, Shuffle)" />
+            <input
+              id="casinoWeeklyLimit"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Weekly limit" />
+            <input
+              id="casinoMonthlyLimit"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Monthly limit" />
+            <button type="submit" class="primary">Add</button>
+          </form>
+          <ul id="casinoList" class="list"></ul>
+        </section>
+
+        <section class="card" data-section="entry">
+          <h2>Log entry</h2>
+          <form id="entryForm" class="grid">
+            <label>Date <input type="date" id="entryDate" required /></label>
+            <label
+              >Casino
+              <select id="entryCasino" required></select
+            ></label>
+            <label
+              >Spent
+              <input type="number" id="entrySpent" min="0" step="0.01" required
+            /></label>
+            <label
+              >Won <input type="number" id="entryWon" min="0" step="0.01"
+            /></label>
+            <label
+              >Notes
+              <input
+                type="text"
+                id="entryNotes"
+                maxlength="120"
+                placeholder="Daily summary/wins/losses"
+            /></label>
+            <button id="addEntryBtn" type="submit" class="primary">
+              Add entry
+            </button>
+          </form>
+          <p class="hint">
+            Tip: Logging daily, even on non‑play days, helps awareness.
+          </p>
+        </section>
+
+        <section class="card" data-section="history">
+          <h2>History</h2>
+          <table id="historyTable" class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Casino</th>
+                <th>Spent</th>
+                <th>Won</th>
+                <th>Net</th>
+                <th>Notes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="card" data-section="insights dashboard">
+          <h2>Insights</h2>
+          <div class="charts">
+            <canvas id="weeklyNetChart"></canvas>
+            <canvas id="casinoSpendChart"></canvas>
+          </div>
+        </section>
+
+        <section class="card danger-zone" data-section="danger">
+          <h2>Danger zone</h2>
+          <button id="wipeDataBtn" class="danger">Erase all data</button>
+          <p class="hint">
+            If gambling feels hard to control, consider a break.
+            <a
+              href="https://www.begambleaware.org/"
+              target="_blank"
+              rel="noopener"
+              >Help resources</a
+            >.
+          </p>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div id="sessionTimer">Session: 00:00</div>
+        <div>Stay safe: budgets first, never chase losses.</div>
+      </footer>
+    </div>
 
     <dialog id="cooldownDialog">
       <form method="dialog">
@@ -176,7 +193,9 @@
           placeholder="Why do you need to continue today?"></textarea>
         <div class="row">
           <button value="cancel">Cancel</button>
-          <button id="startCooldownBtn" value="start">Start cooldown</button>
+          <button id="startCooldownBtn" value="start" class="primary">
+            Start cooldown
+          </button>
         </div>
         <p id="cooldownStatus" class="muted"></p>
       </form>

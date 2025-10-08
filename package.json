@@ -1,12 +1,16 @@
 {
   "name": "casino-budget-tracker",
-  "version": "1.0.0",
-  "description": "Safety-first casino spending tracker",
-  "type": "module",
+  "version": "1.2.0",
+  "description": "Safety-first casino spending tracker with themed UI, sidebar navigation, budgets, per-casino limits, and charts.",
   "main": "main.js",
+  "type": "module",
+  "author": "",
+  "license": "MIT",
   "scripts": {
+    "start": "electron .",
     "dev": "electron .",
-    "start": "electron ."
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
   },
   "dependencies": {
     "electron-store": "^9.0.0"
@@ -16,8 +20,29 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
+    "appId": "com.example.casinobudgettracker",
+    "productName": "Casino Budget Tracker",
     "files": [
-      "preload.cjs"
-    ]
+      "main.js",
+      "preload.cjs",
+      "store.js",
+      "renderer/**",
+      "utils/**",
+      "SECURITY.md"
+    ],
+    "mac": {
+      "category": "public.app-category.finance"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Finance"
+    }
   }
 }
